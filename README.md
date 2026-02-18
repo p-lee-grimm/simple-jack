@@ -32,6 +32,76 @@ claude-telegram-bot/
 └── workspace/           # Рабочая директория для Claude
 ```
 
+## Установка и запуск
+
+### 1. Предварительные требования
+
+- Python 3.13+
+- [Claude Code CLI](https://claude.ai/code) — установлен и авторизован (`claude --version`)
+- Telegram Bot Token — получить у [@BotFather](https://t.me/BotFather)
+
+### 2. Клонирование репозитория
+
+```bash
+git clone https://github.com/p-lee-grimm/simple-jack.git claude-telegram-bot
+cd claude-telegram-bot
+```
+
+### 3. Виртуальное окружение и зависимости
+
+```bash
+python3 -m venv ~/envs/claude-bot-env
+source ~/envs/claude-bot-env/bin/activate
+pip install -r requirements.txt
+```
+
+### 4. Конфигурация
+
+Создайте файл `.env` в корне проекта:
+
+```bash
+cp .env.example .env   # если есть шаблон
+# или создайте вручную:
+nano .env
+```
+
+Содержимое `.env`:
+
+```env
+TELEGRAM_BOT_TOKEN=your_bot_token_here
+ALLOWED_USERNAME=your_telegram_username
+CLAUDE_CLI_PATH=/home/YOUR_USERNAME/.local/bin/claude
+WORKSPACE_DIR=/home/YOUR_USERNAME/claude-telegram-bot/workspace
+DATA_DIR=/home/YOUR_USERNAME/claude-telegram-bot/data
+SESSION_TIMEOUT_HOURS=24
+```
+
+Установите права доступа:
+
+```bash
+chmod 600 .env
+```
+
+### 5. Запуск
+
+**Вручную (для разработки и отладки):**
+
+```bash
+source ~/envs/claude-bot-env/bin/activate
+python -m src.main
+```
+
+**Как systemd-сервис (для продакшена):**
+
+Отредактируйте `claude-telegram-bot.service`, заменив `YOUR_USERNAME` на ваше имя пользователя, затем установите сервис:
+
+```bash
+sudo cp claude-telegram-bot.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable claude-telegram-bot
+sudo systemctl start claude-telegram-bot
+```
+
 ## Команды бота
 
 - `/start` - приветствие и инструкции
