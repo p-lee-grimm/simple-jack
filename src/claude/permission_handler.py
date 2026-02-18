@@ -34,24 +34,25 @@ class PermissionManager:
         self._pending[request_id] = request
         return request
 
-    def resolve(self, request_id: str, approved: bool) -> bool:
+    def resolve(self, request_id: str, level: str) -> bool:
+        """Resolve a permission request with a level: 'once', 'session', 'always', or 'deny'."""
         request = self._pending.pop(request_id, None)
         if request is None:
             return False
         if not request.response_future.done():
-            request.response_future.set_result(approved)
+            request.response_future.set_result(level)
         return True
 
     def cancel(self, request_id: str):
         """Cancel a specific pending request."""
         req = self._pending.pop(request_id, None)
         if req and not req.response_future.done():
-            req.response_future.set_result(False)
+            req.response_future.set_result("deny")
 
     def cancel_all(self):
         for req in self._pending.values():
             if not req.response_future.done():
-                req.response_future.set_result(False)
+                req.response_future.set_result("deny")
         self._pending.clear()
 
 

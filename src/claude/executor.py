@@ -346,6 +346,7 @@ async def execute_claude(
     stop_event: Optional[asyncio.Event] = None,
     on_permission_request: Optional[Callable[[List[Dict[str, Any]]], Awaitable[List[str]]]] = None,
     on_question: Optional[Callable[[Dict[str, Any]], Awaitable[Optional[Dict[int, str]]]]] = None,
+    pre_approved_tools: Optional[Set[str]] = None,
 ) -> ClaudeResponse:
     """
     Execute Claude CLI with the given message.
@@ -374,13 +375,18 @@ async def execute_claude(
         # Safe tools that don't need user approval
         SAFE_TOOLS = "Read,Glob,Grep,Explore,Task,TaskOutput"
 
+        # Combine safe tools with any pre-approved tools (session or always)
+        initial_tools = list(dict.fromkeys(
+            SAFE_TOOLS.split(",") + (list(pre_approved_tools) if pre_approved_tools else [])
+        ))
+
         # Build base command
         cmd = [
             settings.claude_cli_path,
             "-p",
             "--output-format", "stream-json",
             "--verbose",
-            "--allowedTools", SAFE_TOOLS,
+            "--allowedTools", ",".join(initial_tools),
         ]
 
         if continue_session:
@@ -485,9 +491,11 @@ async def execute_claude(
             if not approved_tools and not auto_tools and not question_answer_text:
                 break
 
-            # Combine user-approved + auto-approved + safe tools + AskUserQuestion
+            # Combine user-approved + auto-approved + safe tools + pre-approved + AskUserQuestion
             all_tools = list(dict.fromkeys(
-                approved_tools + auto_tools + SAFE_TOOLS.split(",") + ["AskUserQuestion"]
+                approved_tools + auto_tools + SAFE_TOOLS.split(",")
+                + (list(pre_approved_tools) if pre_approved_tools else [])
+                + ["AskUserQuestion"]
             ))
             logger.info(f"Retrying with tools: {all_tools}")
 

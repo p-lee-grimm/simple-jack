@@ -133,24 +133,35 @@ async def permission_button_callback(update: Update, context: ContextTypes.DEFAU
     await query.answer()
 
     data = query.data
-    if data.startswith("perm_approve_"):
-        request_id = data[len("perm_approve_"):]
-        approved = True
+    if data.startswith("perm_once_"):
+        request_id = data[len("perm_once_"):]
+        level = "once"
+    elif data.startswith("perm_session_"):
+        request_id = data[len("perm_session_"):]
+        level = "session"
+    elif data.startswith("perm_always_"):
+        request_id = data[len("perm_always_"):]
+        level = "always"
     elif data.startswith("perm_deny_"):
         request_id = data[len("perm_deny_"):]
-        approved = False
+        level = "deny"
     else:
         return
 
-    resolved = permission_manager.resolve(request_id, approved)
+    resolved = permission_manager.resolve(request_id, level)
 
     if resolved:
-        status_icon = "✅" if approved else "❌"
-        status_text = "Одобрено" if approved else "Отклонено"
+        level_labels = {
+            "once": "✅ Одобрено (один раз)",
+            "session": "📌 Одобрено для сессии",
+            "always": "🔒 Одобрено навсегда",
+            "deny": "❌ Отклонено",
+        }
+        status_text = level_labels.get(level, "✅ Одобрено")
         try:
             original_text = query.message.text or ""
             await query.edit_message_text(
-                f"{original_text}\n\n{status_icon} {status_text}",
+                f"{original_text}\n\n{status_text}",
                 reply_markup=None
             )
         except BadRequest:
@@ -394,12 +405,12 @@ def format_tool_description(tool_name: str, tool_input: dict) -> str:
             return str(tool_input)[:500]
 
 
-def create_permission_callback(chat, reply_to_message_id: int, tracked_ids: set):
+def create_permission_callback(chat, reply_to_message_id: int, tracked_ids: set, session, user_id: int):
     """
     Create a permission request callback for the executor.
 
     Sends a single consolidated permission message with all unique tools.
-    User approves/denies all at once.
+    User approves/denies all at once, choosing the approval duration.
     """
     async def on_permission_request(denials: List[Dict[str, Any]]) -> List[str]:
         # Deduplicate by tool_name, keep first example of each
@@ -422,9 +433,13 @@ def create_permission_callback(chat, reply_to_message_id: int, tracked_ids: set)
 
         keyboard = InlineKeyboardMarkup([
             [
-                InlineKeyboardButton("✅ Одобрить все", callback_data=f"perm_approve_{request_id}"),
+                InlineKeyboardButton("✅ Один раз", callback_data=f"perm_once_{request_id}"),
+                InlineKeyboardButton("📌 Для сессии", callback_data=f"perm_session_{request_id}"),
+            ],
+            [
+                InlineKeyboardButton("🔒 Всегда", callback_data=f"perm_always_{request_id}"),
                 InlineKeyboardButton("❌ Отклонить", callback_data=f"perm_deny_{request_id}"),
-            ]
+            ],
         ])
 
         # Split description into messages if too long
@@ -489,14 +504,29 @@ def create_permission_callback(chat, reply_to_message_id: int, tracked_ids: set)
         )
 
         try:
-            approved = await asyncio.wait_for(request.response_future, timeout=300)
-            if approved:
-                return unique_tools
+            level = await asyncio.wait_for(request.response_future, timeout=300)
         except asyncio.TimeoutError:
-            permission_manager.resolve(request_id, False)
+            permission_manager.resolve(request_id, "deny")
             logger.info(f"Permission request timed out for {unique_tools}")
+            return []
 
-        return []
+        if level == "deny":
+            return []
+
+        # Persist approval based on level
+        if level == "session":
+            session.approved_tools.update(unique_tools)
+            session_manager.save_session(session)
+            logger.info(f"Approved for session: {unique_tools}")
+        elif level == "always":
+            always = session_manager.load_always_approved(user_id)
+            always.update(unique_tools)
+            session_manager.save_always_approved(user_id, always)
+            session.approved_tools.update(unique_tools)
+            session_manager.save_session(session)
+            logger.info(f"Approved always: {unique_tools}")
+
+        return unique_tools
 
     return on_permission_request
 
@@ -814,11 +844,15 @@ async def _handle_claude_request(
     perm_request_ids = set()
     question_request_ids = set()
 
+    pre_approved = session.approved_tools | session_manager.load_always_approved(user_id)
+
     streaming_callback = create_streaming_callback(status_message, stop_event)
     permission_callback = create_permission_callback(
         update.message.chat,
         update.message.message_id,
         perm_request_ids,
+        session,
+        user_id,
     )
     question_callback = create_question_callback(
         update.message.chat,
@@ -836,6 +870,7 @@ async def _handle_claude_request(
             stop_event=stop_event,
             on_permission_request=permission_callback,
             on_question=question_callback,
+            pre_approved_tools=pre_approved or None,
         )
 
         logger.info(f"execute_claude returned: error={response.error!r}, text_len={len(response.text or '')}, files={len(response.created_files)}")

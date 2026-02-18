@@ -22,6 +22,7 @@ class Session:
         self.working_directory = str(Path(settings.workspace_dir) / f"user_{user_id}")
         self.last_activity = datetime.now()
         self.created_at = datetime.now()
+        self.approved_tools: set = set()  # Tools approved for the lifetime of this session
 
     def add_message(self, role: str, content: str, metadata: Optional[Dict[str, Any]] = None):
         """Add a message to the session history."""
@@ -42,7 +43,8 @@ class Session:
             "messages": self.messages,
             "working_directory": self.working_directory,
             "last_activity": self.last_activity.isoformat(),
-            "created_at": self.created_at.isoformat()
+            "created_at": self.created_at.isoformat(),
+            "approved_tools": list(self.approved_tools),
         }
 
     @classmethod
@@ -53,6 +55,7 @@ class Session:
         session.working_directory = data.get("working_directory", session.working_directory)
         session.last_activity = datetime.fromisoformat(data["last_activity"])
         session.created_at = datetime.fromisoformat(data.get("created_at", data["last_activity"]))
+        session.approved_tools = set(data.get("approved_tools", []))
         return session
 
     def is_expired(self) -> bool:
@@ -84,6 +87,30 @@ class SessionManager:
 
     def _index_path(self, user_id: int) -> Path:
         return self._user_dir(user_id) / "index.json"
+
+    def _always_approved_path(self, user_id: int) -> Path:
+        return self._user_dir(user_id) / "always_approved.json"
+
+    def load_always_approved(self, user_id: int) -> set:
+        """Load the set of permanently approved tools for this user."""
+        path = self._always_approved_path(user_id)
+        if path.exists():
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                return set(data.get("tools", []))
+            except Exception as e:
+                logger.error(f"Failed to load always_approved for user {user_id}: {e}")
+        return set()
+
+    def save_always_approved(self, user_id: int, tools: set):
+        """Persist the set of permanently approved tools for this user."""
+        path = self._always_approved_path(user_id)
+        try:
+            with open(path, 'w', encoding='utf-8') as f:
+                json.dump({"tools": sorted(tools)}, f, indent=2)
+        except Exception as e:
+            logger.error(f"Failed to save always_approved for user {user_id}: {e}")
 
     def _session_path(self, user_id: int, session_id: str) -> Path:
         return self._user_dir(user_id) / f"{session_id}.json"
