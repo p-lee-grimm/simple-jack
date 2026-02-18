@@ -60,8 +60,7 @@ pip install -r requirements.txt
 Создайте файл `.env` в корне проекта:
 
 ```bash
-cp .env.example .env   # если есть шаблон
-# или создайте вручную:
+cp .env.example .env
 nano .env
 ```
 
