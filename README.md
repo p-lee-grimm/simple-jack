@@ -1,53 +1,53 @@
 # Claude Telegram Bot
 
-Telegram бот для интеграции с Claude Code CLI.
+Telegram bot for integration with Claude Code CLI.
 
-## Возможности
+## Features
 
-- Обработка текстовых сообщений через Claude Code
-- Поддержка изображений и документов
-- Сохранение контекста диалога
-- Автоматическая отправка созданных файлов
-- Разбивка длинных ответов
-- Фильтрация по username
+- Process text messages via Claude Code
+- Support for images and documents
+- Conversation context persistence
+- Automatic sending of created files
+- Long response splitting
+- Username filtering
 
-## Структура проекта
+## Project Structure
 
 ```
 claude-telegram-bot/
-├── .env                  # Конфигурация
-├── requirements.txt      # Python зависимости
+├── .env                  # Configuration
+├── requirements.txt      # Python dependencies
 ├── config/
-│   └── settings.py      # Настройки приложения
+│   └── settings.py      # Application settings
 ├── src/
-│   ├── main.py          # Точка входа
-│   ├── bot/             # Обработчики Telegram
-│   ├── claude/          # Интеграция с Claude CLI
-│   ├── media/           # Обработка медиафайлов
-│   └── utils/           # Утилиты
+│   ├── main.py          # Entry point
+│   ├── bot/             # Telegram handlers
+│   ├── claude/          # Claude CLI integration
+│   ├── media/           # Media file handling
+│   └── utils/           # Utilities
 ├── data/
-│   ├── sessions/        # История диалогов
-│   ├── media/           # Временные медиафайлы
-│   └── logs/            # Логи
-└── workspace/           # Рабочая директория для Claude
+│   ├── sessions/        # Conversation history
+│   ├── media/           # Temporary media files
+│   └── logs/            # Logs
+└── workspace/           # Working directory for Claude
 ```
 
-## Установка и запуск
+## Installation and Setup
 
-### 1. Предварительные требования
+### 1. Prerequisites
 
 - Python 3.13+
-- [Claude Code CLI](https://claude.ai/code) — установлен и авторизован (`claude --version`)
-- Telegram Bot Token — получить у [@BotFather](https://t.me/BotFather)
+- [Claude Code CLI](https://claude.ai/code) — installed and authenticated (`claude --version`)
+- Telegram Bot Token — obtain from [@BotFather](https://t.me/BotFather)
 
-### 2. Клонирование репозитория
+### 2. Clone the Repository
 
 ```bash
 git clone https://github.com/p-lee-grimm/simple-jack.git claude-telegram-bot
 cd claude-telegram-bot
 ```
 
-### 3. Виртуальное окружение и зависимости
+### 3. Virtual Environment and Dependencies
 
 ```bash
 python3 -m venv ~/envs/claude-bot-env
@@ -55,16 +55,16 @@ source ~/envs/claude-bot-env/bin/activate
 pip install -r requirements.txt
 ```
 
-### 4. Конфигурация
+### 4. Configuration
 
-Создайте файл `.env` в корне проекта:
+Create a `.env` file in the project root:
 
 ```bash
 cp .env.example .env
 nano .env
 ```
 
-Содержимое `.env`:
+Contents of `.env`:
 
 ```env
 TELEGRAM_BOT_TOKEN=your_bot_token_here
@@ -75,24 +75,24 @@ DATA_DIR=/home/YOUR_USERNAME/claude-telegram-bot/data
 SESSION_TIMEOUT_HOURS=24
 ```
 
-Установите права доступа:
+Set file permissions:
 
 ```bash
 chmod 600 .env
 ```
 
-### 5. Запуск
+### 5. Running
 
-**Вручную (для разработки и отладки):**
+**Manually (for development and debugging):**
 
 ```bash
 source ~/envs/claude-bot-env/bin/activate
 python -m src.main
 ```
 
-**Как systemd-сервис (для продакшена):**
+**As a systemd service (for production):**
 
-Отредактируйте `claude-telegram-bot.service`, заменив `YOUR_USERNAME` на ваше имя пользователя, затем установите сервис:
+Edit `claude-telegram-bot.service`, replacing `YOUR_USERNAME` with your username, then install the service:
 
 ```bash
 sudo cp claude-telegram-bot.service /etc/systemd/system/
@@ -101,55 +101,55 @@ sudo systemctl enable claude-telegram-bot
 sudo systemctl start claude-telegram-bot
 ```
 
-## Команды бота
+## Bot Commands
 
-- `/start` - приветствие и инструкции
-- `/help` - справка по использованию
-- `/reset` - очистка истории диалога
+- `/start` - greeting and instructions
+- `/help` - usage help
+- `/reset` - clear conversation history
 
-## Управление сервисом
+## Service Management
 
 ```bash
-# Проверить статус
+# Check status
 sudo systemctl status claude-telegram-bot.service
 
-# Остановить
+# Stop
 sudo systemctl stop claude-telegram-bot.service
 
-# Запустить
+# Start
 sudo systemctl start claude-telegram-bot.service
 
-# Перезапустить
+# Restart
 sudo systemctl restart claude-telegram-bot.service
 
-# Отключить автозапуск
+# Disable autostart
 sudo systemctl disable claude-telegram-bot.service
 
-# Включить автозапуск
+# Enable autostart
 sudo systemctl enable claude-telegram-bot.service
 ```
 
-## Просмотр логов
+## Viewing Logs
 
 ```bash
-# Логи systemd
+# systemd logs
 journalctl -u claude-telegram-bot.service -f
 
-# Файловые логи
+# File logs
 tail -f ~/claude-telegram-bot/data/logs/bot.log
 ```
 
-## Конфигурация
+## Configuration
 
-Файл `.env` содержит:
-- `TELEGRAM_BOT_TOKEN` - токен Telegram бота
-- `ALLOWED_USERNAME` - разрешенный username
-- `CLAUDE_CLI_PATH` - путь к Claude CLI
-- `WORKSPACE_DIR` - рабочая директория
-- `DATA_DIR` - директория данных
-- `SESSION_TIMEOUT_HOURS` - таймаут сессии
+The `.env` file contains:
+- `TELEGRAM_BOT_TOKEN` - Telegram bot token
+- `ALLOWED_USERNAME` - allowed username
+- `CLAUDE_CLI_PATH` - path to Claude CLI
+- `WORKSPACE_DIR` - working directory
+- `DATA_DIR` - data directory
+- `SESSION_TIMEOUT_HOURS` - session timeout
 
-## Технологии
+## Technologies
 
 - Python 3.13
 - python-telegram-bot 21.0
@@ -157,9 +157,9 @@ tail -f ~/claude-telegram-bot/data/logs/bot.log
 - aiofiles
 - Claude Code CLI
 
-## Безопасность
+## Security
 
-- Фильтрация по username на уровне MessageFilter
-- Токен бота хранится в .env с правами 600
-- Изолированные workspace для каждого пользователя
-- Логирование всех действий
+- Username filtering at the MessageFilter level
+- Bot token stored in .env with 600 permissions
+- Isolated workspaces per user
+- Logging of all actions
